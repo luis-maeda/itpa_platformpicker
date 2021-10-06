@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Platform Picker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE11">
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    
+
+    <link rel="stylesheet" href="./assets/css/styles.css">
+
+    <link href="./unity-1.3.0/css/em-unity-1.3.0.css" media="all" rel="stylesheet" />
+    <script src="./unity-1.3.0/js/vendor/svg4everybody.min.js"></script>
+
+ 
+    <script>
+        $(function () {
+
+            var platTech='';
+            var isLabLanOrXomDmz='';
+            var FGPP25='';
+
+            $("#selectedPlatform").hide();
+
+            var controlsOptions = ["Low","Normal","BusinessApproval","High","HighRisk","HighRiskBusinessApproval","Approval","TicketOnly","None"];
+                var controlsOptionsGeneralOnly = ["None", "TicketOnly"];
+            var passwordDisplayOptions = ["Standard","Split","Disabled"];
+            var passwordManagementOptions = ["Auto","Manual","ManualOnUse","External", "OnUse", "PeriodicOnly"];
+                var passwordManagementOptionsGeneralOnly = ["ManualOnUse","External"];
+            var selectedPlatformOptions = [];
+
+            var WinDomain="this is an Active Directory Account";
+
+            $("#domainAccount,#notDomainAccount").click(function(){
+                if($('#domainAccount').prop( "checked" )){
+                    $("#technologyType").addClass("em-u-is-vishidden");
+                    $("#serviceAccountSection").show();
+                    $("#platformTechnology option[value='']").prop('selected', true);
+                    setRulesToGeneral();
+                }
+                if($('#notDomainAccount').prop( "checked" )){
+                    $("#technologyType").removeClass("em-u-is-vishidden");
+                    $("#serviceAccountSection").hide();
+                    $("#toggleServiceAccount-2").prop("checked", true);
+                    FGPP25=''
+                }
+            });
+
+            $("input[type=radio][name=LLXOMDMZToggle]").change(function(){
+                if($('#toggleLLXOMDMZ-2').prop( "checked" )){
+                    isLabLanOrXomDmz = "-LABLAN"
+                }
+                else if($('#toggleLLXOMDMZ-3').prop( "checked" )){
+                    isLabLanOrXomDmz = "-XOMDMZ"
+                }
+                else{
+                    isLabLanOrXomDmz = ""
+                }
+            });
+
+            function validateFields(){
+                                
+                var validation = '';
+
+                if($('#notDomainAccount').prop( "checked" ) && $('#platformTechnology').val() == ""){
+                    validation += "Technology is missing.<br>";
+                }
+                if($('#controls').val() == ""){
+                    validation += "Control is missing. <br>";
+                }
+                if($('#passwordDisplay').val() == ""){
+                    validation += "Password Display is missing.<br>";
+                }
+                if($('#passwordManagement').val() == ""){
+                    validation += "Password Management is missing.<br>";
+                }
+
+                return validation;
+            }
+
+            $("#btnCancel").click(function(){
+                location.reload(true);
+            });
+
+            $("#btnSubmit").click(function(){
+                
+                var validation = validateFields();
+                
+                if(validation != ""){
+                    $("#errormsg").html(validation);
+                    $("#errorBlock").show();
+                    $("#selectedPlatform").hide();
+                    $('html, body').animate({scrollTop: '0px'}, 300);//Scroll to top of page
+                    return;
+                }
+                else{
+                    $("#errormsg").html("");
+                    $("#errorBlock").hide();
+                }
+                var descriptions = '';
+
+                descriptions += "<ul>"
+                if ($('#domainAccount').prop( "checked" )){
+                    platTech='WinDomain';
+                    descriptions += "<li><b>WinDomain</b>: this is an Active Directory account</li>"
+                } else {
+                    platTech=$('#platformTechnology').val();
+                    FGPP25 = '';
+                    descriptions += "<li><b>"+platTech+"</b>: account needs this technology</li>"
+                }
+
+                $('.highlightGold').each(function(i, obj) {
+                    descriptions += "<li>" + $(obj).html() + '</li>';
+                });
+                
+                getSelections();
+
+                if ($('#toggleLLXOMDMZ-2').prop( "checked" )){
+                    descriptions += "<li><b>LabLAN</b>: Accounts must be added to LabLAN safes (ending on: <b>-LL</b>)</li>"
+                } else if ($('#toggleLLXOMDMZ-3').prop( "checked" )){
+                    descriptions += "<li><b>XomDMZ</b>: Accounts must be added to XomDMZ safes (ending on: <b>-XN</b>)</li>"
+                }
+                descriptions += "</ul>"
+
+                $('html, body').animate({scrollTop: '0px'}, 300);//Scroll to top of page
+
+                $("#recommendedPlatform").html("EM-"+platTech+FGPP25+"-"+$('#controls').val()+"-"+$('#passwordDisplay').val()+"-"+$('#passwordManagement').val()+isLabLanOrXomDmz);
+                $("#selectedPlatform").show();
+                $("#platformDefinition").html(descriptions)
+
+            });
+
+            function getSelections(){
+
+                $('#rightHeader').html("Based on your selection this is the platform recommendation:");
+                $('#platformSummary').removeClass("em-u-is-vishidden");
+            }
+
+            $(".highlight").change(function(e){
+                var highlight = '#' + e.target.id + "_" + $('#' + e.target.id).val();
+                var clearCss;
+                var arrayName = e.target.id + 'Options';
+
+                for(i=0; i < eval(arrayName).length; i++){
+                    clearCss = '#' + e.target.id + "_" + eval(arrayName)[i];
+                    //console.log(clearCss)
+                    $(clearCss).removeClass('highlightGold');
+                }
+
+                $(highlight).addClass('highlightGold');
+                
+            });
+
+            $("#platformTechnology").change(function(){
+                
+                setRulesToGeneral();
+                
+            });
+
+            function setRulesToGeneral(){
+                
+                var selectedTechnology = $('#platformTechnology option:selected').val();
+                var isControlSelected=false;
+                var isPasswordManagementSelected=false;
+
+                if(selectedTechnology == 'General' && $('#notDomainAccount').prop( "checked" )){
+
+                    for(i=0; i < controlsOptions.length; i++){
+                        
+                        if(!isInArray(controlsOptions[i], controlsOptionsGeneralOnly)){
+                            $("#controls option[value='"+ controlsOptions[i] + "']").prop('disabled', true); 
+                        }
+                        else{
+                            if($("#controls option[value='"+ controlsOptions[i] + "']").prop('selected')){
+                                isControlSelected = true;
+                            } 
+                        }
+                    }
+
+                    if(!isControlSelected){
+                        $("#controls option[value='']").prop('selected', true)
+                        for(i=0; i < controlsOptions.length; i++){
+                            $("#controls_"+controlsOptions[i]).removeClass('highlightGold');
+                        }
+                    }
+
+                    for(i=0; i < passwordManagementOptions.length; i++){
+                        
+                        if(!isInArray(passwordManagementOptions[i], passwordManagementOptionsGeneralOnly)){
+                            $("#passwordManagement option[value='"+ passwordManagementOptions[i] + "']").prop('disabled', true); 
+                        }
+                        else{
+                            if($("#passwordManagement option[value='"+ passwordManagementOptions[i] + "']").prop('selected')){
+                                isPasswordManagementSelected = true;
+                            } 
+                        }
+                    }
+
+                    if(!isPasswordManagementSelected){
+                        $("#passwordManagement option[value='']").prop('selected', true)
+                        for(i=0; i < passwordManagementOptions.length; i++){
+                            $("#passwordManagement_"+passwordManagementOptions[i]).removeClass('highlightGold');
+                        }
+                    }
+                }
+                else{
+
+                    for(i=0; i < controlsOptions.length; i++){
+                        $("#controls option[value='"+ controlsOptions[i] + "']").prop('disabled', false); 
+                    }
+
+                    for(i=0; i < passwordManagement.length; i++){
+                        $("#passwordManagement option[value='"+ passwordManagementOptions[i] + "']").prop('disabled', false); 
+                    }
+                }
+            }
+
+            function isInArray(value, array) {
+                return array.indexOf(value) > -1;
+            }
+
+            $("input[type=radio][name=ServiceAccountToggle]").change(function(){
+                
+                if($(this).val() == 'Y'){
+                    FGPP25 = 'FGPP25'
+                }
+                else{
+                    FGPP25 = ''
+                }
+
+            });
+
+            $("#btnCloseError").click(function(){
+                $("#errorBlock").hide();
+            });
+
+            $("#selectGeneraltechnology").click(function(){
+                $("#platformTechnology option[value='General']").prop('selected', true);
+                setRulesToGeneral();
+            });
+
+        });
+    </script>
+</head>
+
+<body class="em-theme--blue">
+        <header class="em-c-header" role="banner">
+          <div class="em-l-container em-c-header__inner">
+            <div class="em-c-header__body">
+              <div class="em-c-header__title-container">
+                <h2 class="em-c-header__title"><a href="#" rel="home" class="em-c-header__title-link">ITPA Tools</a></h2>
+              </div>
+              <!-- end em-c-header__left -->
+              <button class="em-c-btn em-c-btn--small em-c-btn--inverted em-c-header__nav-btn em-js-nav-trigger">
+                <div class="em-c-btn__inner">
+                  <svg class="em-c-icon em-c-icon--small em-c-btn__icon em-js-btn-icon" data-em-btn-toggle-text="Close"
+                    data-em-icon-path="./src/unity-1.3.0/images/em-icons.svg">
+                    <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="./unity-1.3.0/images/em-icons.svg#hamburger">
+                    </use>
+                  </svg>
+                  <svg class="em-c-icon em-c-icon--small em-c-btn__icon em-u-is-hidden em-js-btn-swap-icon"
+                    data-em-icon-path="./unity-1.3.0/images/em-icons.svg">
+                    <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="./unity-1.3.0/images/em-icons.svg#x-filled">
+                    </use>
+                  </svg>
+                  <span class="em-c-btn__text em-js-btn-label">Menu</span>
+                </div>
+              </button>
+              <!-- end em-c-btn -->
+              <div class="em-c-header__nav-container em-js-nav-panel">
+                <nav id="nav" class="em-c-primary-nav" role="navigation">
+                  <ul class="em-c-primary-nav__list">
+                    <li class="em-c-primary-nav__item ">
+                      <a href="#" class="em-c-primary-nav__link em-is-current ">
+      
+                        Home
+      
+                      </a>
+                      <!--end em-c-primary-nav__link-->
+                    </li>
+                    <!-- end em-c-nav__list__item -->
+                    <li class="em-c-primary-nav__item ">
+                      <a href="#"
+                        class="em-c-primary-nav__link  em-c-primary-nav__link--has-children em-js-nav-dropdown-trigger">
+      
+                        ITPA Tools
+      
+                        <svg class="em-c-icon em-c-icon--small em-c-primary-nav__icon">
+                          <use xmlns:xlink="http://www.w3.org/1999/xlink"
+                            xlink:href="./unity-1.3.0/images/em-icons.svg#caret-down"></use>
+                        </svg>
+                      </a>
+                      <!--end em-c-primary-nav__link-->
+                      <div class="em-c-primary-nav__sublist  em-js-nav-dropdown ">
+                        <ul>
+                          <li class="em-c-primary-nav__subitem">
+                            <a href="http://goto/itpaunlockform" target="_blank" class="em-c-primary-nav__sublink">Unlock form</a>
+                          </li>
+                          <!-- end em-c-nav__sublist__item -->
+                        </ul>
+                      </div>
+                      <!-- end em-c-nav__sublist -->
+                    </li>
+                    <!-- end em-c-nav__list__item -->
+                    <li class="em-c-primary-nav__item ">
+                        <a href="http://goto/ITPA" target="_blank" class="em-c-primary-nav__link ">
+                            ITPA
+                        </a>
+                    </li>
+                    <!-- end em-c-nav__list__item -->
+                  </ul>
+                  <!-- end em-c-nav__list -->
+                </nav>
+                <!-- end em-c-nav -->
+              </div>
+              <!-- end em-c-header__nav -->
+            </div>
+            <!-- end em-c-header__body -->
+          </div>
+          <!-- end em-l-container -->
+        </header>
+
+    <main role="main">
+        <div class="em-l-container">
+            <div class="em-c-page-header ">
+                <h1 class="em-c-page-header__title">Platform Picker</h1>
+                <p class="em-c-page-header__desc">This tool will help you to find out the right ITPA platform type to manage passwords for your accounts.</p>
+            </div>
+
+            <div class="em-l-grid em-l-grid--2up em-l-grid--break-fast">
+                <div class="em-l-grid__item">
+                    <!-- 'fpo' stands for 'for placement only'. Replace the 'fpo-block' div element with your own markup-->
+
+                    <div id="errorBlock" class="em-c-alert em-c-alert--error" style="display: none;" role="alert">
+                        <svg class="em-c-icon em-c-icon--small em-c-alert__icon">
+                          <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="./unity-1.3.0/images/em-icons.svg#circle-exclamation-mark"></use>
+                        </svg>
+                        <div class="em-c-alert__body" id="errormsg">
+                        </div>
+                        <div class="em-c-alert__actions">
+                          <button id="btnCloseError" class="em-c-text-btn em-c-alert--error">
+                            Close
+                          </button>
+                        </div>
+                    </div>
+
+
+                    <div class="fpo-block">
+                        <ul class="em-c-accordion">
+                            <li class="em-c-accordion__item em-js-accordion-item" id="accordion-panel-1">
+                                <div class="em-c-accordion__header">
+                                    <a href="#accordion-panel-1" class="em-c-accordion__title em-js-accordion-trigger">
+                                        <svg class="em-c-icon em-c-icon--small em-c-accordion__icon">
+                                            <use xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                xlink:href="./unity-1.3.0/images/em-icons.svg#caret-down">
+                                            </use>
+                                        </svg>
+                                        <span class="em-c-accordion__title-text">1. Technology</span>
+                                    </a>
+                                </div>
+                                <div class="em-c-accordion__body">
+                                    <div class="em-c-field em-c-field--toggle">
+                                        <h4 class="em-c-field__label">Is it a Domain Account? (NA, SA, AP, EA, UPSTREAMACCTS)</h4>
+                                        <div class="em-c-field__body">
+                                            <div class="em-c-toggle" id="technology">
+                                                <input class="em-c-toggle__input em-u-is-vishidden" type="radio"
+                                                    id="domainAccount" name="TechnologyToggle"
+                                                    checked />
+                                                <label class="em-c-toggle__label" for="domainAccount">
+                                                    Yes
+                                                </label>
+                                                <input class="em-c-toggle__input em-u-is-vishidden" type="radio"
+                                                    id="notDomainAccount" name="TechnologyToggle" />
+                                                <label class="em-c-toggle__label" for="notDomainAccount">
+                                                    No
+                                                </label>
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="em-u-is-vishidden" id="technologyType">
+                                            <span><h4 class="em-c-field__label">Technology <a href="#modalTechnology" class="em-c-modal__trigger em-js-modal-trigger"><svg class="em-c-icon em-c-icon--small">
+                                                <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="./unity-1.3.0/images/24/em-icons.svg#circle-question-mark-filled"></use>
+                                              </svg></a></h4></span>
+                                            <div class="em-c-field__body">
+                                                <select class="em-c-select em-c-select" id="platformTechnology"
+                                                    placeholder="option-0">
+                                                    <option value="">-Select-</option>
+                                                    <option value="Ace">Ace</option>
+                                                    <option value="ADDM">ADDM</option>
+                                                    <option value="ADOpsDomainFGPP25">ADOpsDomainFGPP25</option>
+                                                    <option value="ADOpsDomain">ADOpsDomain</option>
+                                                    <option value="ADOpsLocalFGPP25_NoRecon">ADOpsLocalFGPP25_NoRecon</option>
+                                                    <option value="ADOpsLocalFGPP25">ADOpsLocalFGPP25</option>
+                                                    <option value="ADOpsLocal">ADOpsLocal</option>
+                                                    <option value="ADTrstDomainFGPP25">ADTrstDomainFGPP25</option>
+                                                    <option value="ADTrstDomain">ADTrstDomain</option>
+                                                    <option value="AppDynamics">AppDynamics</option>
+                                                    <option value="ArcGIS1">ArcGIS1</option>
+                                                    <option value="ARIS">ARIS</option>
+                                                    <option value="ARSystem">ARSystem</option>
+                                                    <option value="AS400">AS400</option>
+                                                    <option value="AzureVM">AzureVM</option>
+                                                    <option value="BOBIFGPP14">BOBIFGPP14</option>
+                                                    <option value="BOBI">BOBI</option>
+                                                    <option value="Brocade">Brocade</option>
+                                                    <option value="CARTA">CARTA</option>
+                                                    <option value="CiscoACSCLI">CiscoACSCLI</option>
+                                                    <option value="CiscoACSEnableUser">CiscoACSEnableUser</option>
+                                                    <option value="CiscoACSWebGui">CiscoACSWebGui</option>
+                                                    <option value="CiscoCUCMAdmin">CiscoCUCMAdmin</option>
+                                                    <option value="CiscoELM">CiscoELM</option>
+                                                    <option value="CyberSecurity">CyberSecurity</option>
+                                                    <option value="DB2">DB2</option>
+                                                    <option value="DCNM">DCNM</option>
+                                                    <option value="DellOS9">DellOS9</option>
+                                                    <option value="DellSwitchEnable">DellSwitchEnable</option>
+                                                    <option value="DEPSites">DEPSites</option>
+                                                    <option value="DRAC_VHM_NoRecon">DRAC_VHM_NoRecon</option>
+                                                    <option value="DRAC">DRAC</option>
+                                                    <option value="EnergyComNew">EnergyComNew</option>
+                                                    <option value="EnergyCom">EnergyCom</option>
+                                                    <option value="EnergyComV11_2">EnergyComV11_2</option>
+                                                    <option value="ERStudio">ERStudio</option>
+                                                    <option value="ESM">ESM</option>
+                                                    <option value="ESS">ESS</option>
+                                                    <option value="ESXi">ESXi</option>
+                                                    <option value="F5Admin">F5Admin</option>
+                                                    <option value="F5Root">F5Root</option>
+                                                    <option value="FireEye">FireEye</option>
+                                                    <option value="Flexera">Flexera</option>
+                                                    <option value="FortinetFGP">FortinetFGP</option>
+                                                    <option value="GCRM">GCRM</option>
+                                                    <option value="General">General</option>
+                                                    <option value="GeneralChar16">GeneralChar16</option>
+                                                    <option value="GeneralChar25">GeneralChar25</option>
+                                                    <option value="GeneralFGPP25">GeneralFGPP25</option>
+                                                    <option value="GeneralUpperCase">GeneralUpperCase</option>
+                                                    <option value="HANAFGPP25">HANAFGPP25</option>
+                                                    <option value="HANA">HANA</option>
+                                                    <option value="HANARecon">HANARecon</option>
+                                                    <option value="HP_Blade">HP_Blade</option>
+                                                    <option value="HP_iLO">HP_iLO</option>
+                                                    <option value="HP_Printer_Web">HP_Printer_Web</option>
+                                                    <option value="HP_Printer">HP_Printer</option>
+                                                    <option value="HP_VCM">HP_VCM</option>
+                                                    <option value="HPESuperdome">HPESuperdome</option>
+                                                    <option value="HPRGSFGPP25">HPRGSFGPP25</option>
+                                                    <option value="HPRGS">HPRGS</option>
+                                                    <option value="HSM">HSM</option>
+                                                    <option value="IBMSyncrudeProject">IBMSyncrudeProject</option>
+                                                    <option value="IBP">IBP</option>
+                                                    <option value="IIT">IIT</option>
+                                                    <option value="Integrator">Integrator</option>
+                                                    <option value="IOSSSH_XOMLAB">IOSSSH_XOMLAB</option>
+                                                    <option value="IOSSSH">IOSSSH</option>
+                                                    <option value="IOSSSHType_9">IOSSSHType_9</option>
+                                                    <option value="IOSSSHType4">IOSSSHType4</option>
+                                                    <option value="IOSSSHType9">IOSSSHType9</option>
+                                                    <option value="IOSTelnet">IOSTelnet</option>
+                                                    <option value="IOSTelnetType4">IOSTelnetType4</option>
+                                                    <option value="ITPA">ITPA</option>
+                                                    <option value="JavaFGPP25">JavaFGPP25</option>
+                                                    <option value="Java">Java</option>
+                                                    <option value="Junos_XOMLAB">Junos_XOMLAB</option>
+                                                    <option value="Junos">Junos</option>
+                                                    <option value="Key">Key</option>
+                                                    <option value="Lenovo">Lenovo</option>
+                                                    <option value="MCIFTP">MCIFTP</option>
+                                                    <option value="MicrosoftAzureKeys">MicrosoftAzureKeys</option>
+                                                    <option value="MRUSRecon">MRUSRecon</option>
+                                                    <option value="MRUSRoot">MRUSRoot</option>
+                                                    <option value="MRUS">MRUS</option>
+                                                    <option value="MSSQL">MSSQL</option>
+                                                    <option value="MySQL">MySQL</option>
+                                                    <option value="NetWitness_Linux">NetWitness_Linux</option>
+                                                    <option value="NetworkDataFullAccess">NetworkDataFullAccess</option>
+                                                    <option value="Nexus">Nexus</option>
+                                                    <option value="OEM_9Hours">OEM_9Hours</option>
+                                                    <option value="OEM">OEM</option>
+                                                    <option value="OneTouch">OneTouch</option>
+                                                    <option value="Oracle_30chars">Oracle_30chars</option>
+                                                    <option value="Oracle_30Char">Oracle_30Char</option>
+                                                    <option value="Oracle_9hours">Oracle_9hours</option>
+                                                    <option value="Oracle_OUD">Oracle_OUD</option>
+                                                    <option value="Oracle">Oracle</option>
+                                                    <option value="OracleFGPP25">OracleFGPP25</option>
+                                                    <option value="ProofPointRecon">ProofPointRecon</option>
+                                                    <option value="Proofpoint">Proofpoint</option>
+                                                    <option value="PSMTEST">PSMTEST</option>
+                                                    <option value="QFabricComponentLogin">QFabricComponentLogin</option>
+                                                    <option value="Radio">Radio</option>
+                                                    <option value="RPAAzureRobots">RPAAzureRobots</option>
+                                                    <option value="RPARobotsFGPP25">RPARobotsFGPP25</option>
+                                                    <option value="RPARobotsNoRDP_FGPP25">RPARobotsNoRDP_FGPP25</option>
+                                                    <option value="Salesforce">Salesforce</option>
+                                                    <option value="SAP_SND">SAP_SND</option>
+                                                    <option value="SAPIAS">SAPIAS</option>
+                                                    <option value="SAP">SAP</option>
+                                                    <option value="SecureConnect">SecureConnect</option>
+                                                    <option value="SentinelOneChromeFGPP25">SentinelOneChromeFGPP25</option>
+                                                    <option value="SentinelOneFGPP25">SentinelOneFGPP25</option>
+                                                    <option value="SmartTrack">SmartTrack</option>
+                                                    <option value="SN_DevWEB">SN_DevWEB</option>
+                                                    <option value="Snow_Dev">Snow_Dev</option>
+                                                    <option value="SNOWWeb">SNOWWeb</option>
+                                                    <option value="SplunkGroup">SplunkGroup</option>
+                                                    <option value="SPLUNK">SPLUNK</option>
+                                                    <option value="SuccessFactor">SuccessFactor</option>
+                                                    <option value="SwiftDomain">SwiftDomain</option>
+                                                    <option value="SwiftLocal">SwiftLocal</option>
+                                                    <option value="Swift">Swift</option>
+                                                    <option value="ThreatGrid">ThreatGrid</option>
+                                                    <option value="Triton">Triton</option>
+                                                    <option value="UCSCIMC">UCSCIMC</option>
+                                                    <option value="UCSVmware">UCSVmware</option>
+                                                    <option value="UIT_HPC_Linux">UIT_HPC_Linux</option>
+                                                    <option value="UIT_HPC_Lustre">UIT_HPC_Lustre</option>
+                                                    <option value="UNIX_Linux_Extended">UNIX_Linux_Extended</option>
+                                                    <option value="UNIX_Linux_SSHKey">UNIX_Linux_SSHKey</option>
+                                                    <option value="UNIX_Linux_SSHKeys">UNIX_Linux_SSHKeys</option>
+                                                    <option value="UNIX_Linux_TPC">UNIX_Linux_TPC</option>
+                                                    <option value="UNIX_Linux">UNIX_Linux</option>
+                                                    <option value="UNIXSyncrudeProject_LD">UNIXSyncrudeProject_LD</option>
+                                                    <option value="UNIXSyncrudeProject">UNIXSyncrudeProject</option>
+                                                    <option value="Veslink">Veslink</option>
+                                                    <option value="WAAS">WAAS</option>
+                                                    <option value="WiHART">WiHART</option>
+                                                    <option value="WIM365WEB">WIM365WEB</option>
+                                                    <option value="WinApiToken">WinApiToken</option>
+                                                    <option value="WinDomain">WinDomain</option>
+                                                    <option value="WinLocal_NoRecon">WinLocal_NoRecon</option>
+                                                    <option value="WinLocalFGPP25">WinLocalFGPP25</option>
+                                                    <option value="WinLocal">WinLocal</option>
+                                                    <option value="WinLocalPC_24Hours">WinLocalPC_24Hours</option>
+                                                    <option value="WirelessLANController">WirelessLANController</option>
+                                                    <option value="XEROX_AltaLink">XEROX_AltaLink</option>
+                                                    <option value="XEROX_MFD">XEROX_MFD</option>
+                                                    <option value="ZemaFGPP25">ZemaFGPP25</option>
+                                                 
+                                                </select> 
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    
+                                    <div class="em-c-modal em-js-modal em-is-closed" id="modalTechnology">
+                                        <div class="em-c-modal__window em-js-modal-window">
+                                            <div class="em-c-modal__header">
+                                                <h3 class="em-c-modal__title">Which technology should I choose?</h3>
+                                                <button 
+                                                    class="em-c-btn em-c-btn--bare em-c-modal__close-btn em-js-modal-close-trigger">
+                                                    <span class="em-c-btn__text">Close</span>
+                                                </button>
+                                            </div>
+                                            <div
+                                                class="em-c-modal__body em-c-text-passage em-c-text-passage--small">
+                                                <p>If the technology is not listed, please select <b>General</b> option. <a id="selectGeneraltechnology" class="em-js-modal-close-trigger">Click here</a> to select it automatically.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- BEGIN Is service account SECTION-->
+                                    <div class="em-c-field em-c-field--toggle" id="serviceAccountSection">
+                                        <h4 class="em-c-field__label">Is it a Service Account?</h4>
+                                        <div class="em-c-field__body">
+                                            <div class="em-c-toggle" id="technology">
+                                                <input class="em-c-toggle__input em-u-is-vishidden" type="radio"
+                                                    id="toggleServiceAccount-1" name="ServiceAccountToggle" value="Y" />
+                                                <label class="em-c-toggle__label" for="toggleServiceAccount-1">
+                                                    Yes
+                                                </label>
+                                                <input class="em-c-toggle__input em-u-is-vishidden" type="radio"
+                                                    id="toggleServiceAccount-2" name="ServiceAccountToggle"  value="N" checked />
+                                                <label class="em-c-toggle__label" for="toggleServiceAccount-2">
+                                                    No
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- END Is service account SECTION-->
+
+                                    <!-- BEGIN Is it for a LabLAN or XomDMZ domain SECTION-->
+                                    <div class="em-c-field em-c-field--toggle">
+                                        <h4 class="em-c-field__label">Is it for a LabLAN or XomDMZ domain?</h4>
+                                        <div class="em-c-field__body">
+                                            <div class="em-c-toggle" id="technology">
+                                                <input class="em-c-toggle__input em-u-is-vishidden" type="radio"
+                                                    id="toggleLLXOMDMZ-1" name="LLXOMDMZToggle" value="" checked/>
+                                                <label class="em-c-toggle__label" for="toggleLLXOMDMZ-1">
+                                                    No
+                                                </label>
+                                                <input class="em-c-toggle__input em-u-is-vishidden" type="radio"
+                                                    id="toggleLLXOMDMZ-2" name="LLXOMDMZToggle" value="LABLAN"/>
+                                                <label class="em-c-toggle__label" for="toggleLLXOMDMZ-2">
+                                                    LabLAN
+                                                </label>
+                                                <input class="em-c-toggle__input em-u-is-vishidden" type="radio"
+                                                    id="toggleLLXOMDMZ-3" name="LLXOMDMZToggle" value="XOMDMZ" />
+                                                <label class="em-c-toggle__label" for="toggleLLXOMDMZ-3">
+                                                    XomDMZ
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- END Is it for a LabLAN or XomDMZ domain SECTION-->
+
+                                </div>
+                            </li>
+
+                            <!-- BEGIN controls SECTION-->
+                            <li class="em-c-accordion__item em-js-accordion-item em-is-closed" id="accordion-panel-2">
+                                <div class="em-c-accordion__header">
+                                    <a href="#accordion-panel-2" class="em-c-accordion__title em-js-accordion-trigger">
+                                        <svg class="em-c-icon em-c-icon--small em-c-accordion__icon">
+                                            <use xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                xlink:href="./unity-1.3.0/images/em-icons.svg#caret-down">
+                                            </use>
+                                        </svg>
+                                        <span class="em-c-accordion__title-text">2. Controls</span>
+                                    </a>
+                                </div>
+                                <!-- end em-c-accordion__header -->
+                                <div class="em-c-accordion__body">
+                                    <label for="file" class="em-c-field__label">Controls</label>
+                                    <div class="em-c-field__body">
+                                        <select class="em-c-select em-c-select highlight" id="controls">
+                                            <option value="">-Select-</option>
+                                            <option value="None">None</option>
+                                            <option value="Low">Low</option>
+                                            <option value="TicketOnly">Ticket Only</option>
+                                            <option value="Normal">Normal</option>
+                                            <optgroup label="For critical accounts">
+                                                <option value="BusinessApproval">Business Approval</option>
+                                                <option value="Approval">Approval</option>
+                                                <option value="High">High</option>
+                                                <option value="HighRisk">High Risk</option>
+                                                <option value="HighRiskBusinessApproval">High Risk Business Approval</option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                    <div class="em-c-well">
+                                        <div class="em-c-text-passage em-c-text-passage--small">
+                                            <span id="controls_None" class=""><b> None:</b> Nothing is required.</span><br>
+                                            <span id="controls_Low" class=""><b> Low:</b> Activity logging, direct connection (connect button).</span> <br>
+                                            <span id="controls_TicketOnly" class=""><b> Ticket Only:</b> ITSM ticket.</span><br>
+                                            <span id="controls_Normal" class=""><b> Normal:</b> Activity logging, direct connection (connect button), ITSM ticket.</span> <br>
+                                            <span class="em-c-badge em-c-badge--negative">For critical accounts:</span><br>
+                                            &emsp;<span id="controls_BusinessApproval" class=""><b> Business Approval:</b> Activity logging, direct connection (connect button), approvals.</span><br>
+                                            &emsp;<span id="controls_Approval" class=""><b> Approval:</b> Approval, ITSM Ticket.</span><br>
+                                            &emsp;<span id="controls_High" class=""><b> High:</b> Activity logging, direct connection (connect button), approvals, ITSM ticket.</span><br>
+                                            &emsp;<span id="controls_HighRisk" class=""><b> High Risk:</b> Video recording/Keystroke logging, activity logging, direct connection (connect button).</span><br>
+                                            &emsp;<span id="controls_HighRiskBusinessApproval" class=""><b> High Risk Business Approval:</b> Video recording/Keystroke logging, activity logging, direct connection (connect button), approvals.</span><br>
+                                            <span class="em-c-badge em-c-badge">Info</span> If you are not sure about which control to choose yet, please click <span><b>
+                                                <a href="#modalPlatform" class="em-c-modal__trigger em-js-modal-trigger">here</a></b></span> for more info
+
+                                            <div class="em-c-modal em-js-modal em-is-closed" id="modalPlatform">
+                                                <div class="em-c-modal__window em-js-modal-window">
+                                                    <div class="em-c-modal__header">
+                                                        <h3 class="em-c-modal__title">Controls Notice</h3>
+                                                        <button class="em-c-btn em-c-btn--bare em-c-modal__close-btn em-js-modal-close-trigger">
+                                                            <span class="em-c-btn__text">Close</span>
+                                                        </button>
+                                                        <!-- end em-c-btn -->
+                                                    </div>
+                                                    <!-- end em-c-modal__header -->
+                                                    <div
+                                                        class="em-c-modal__body em-c-text-passage em-c-text-passage--small">
+                                                        <p><b>Production</b> Environments usually require <b>Normal</b>
+                                                            or <b>High</b> as the level of control.
+                                                            <p>This enforces validation of either a TFS item number or
+                                                                an ITSM item number need to be referenced in order to
+                                                                proceed with account checkout.</p>
+                                                            <p>For <b>Non-Prod</b> accounts there is no need for such
+                                                                strict controls. <b>'Low'</b> and <b>'None'</b> are
+                                                                perfectly acceptable.</p>
+                                                            <p>Nonetheless: please consult with your ITRM advisor in
+                                                                order to assess the correct controls for your privileged
+                                                                accounts.</p>
+                                                    </div>
+                                                </div>
+                                            <!-- end em-c-modal__window -->
+                                            </div>
+
+
+                                            <!-- end em-c-modal -->
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- end em-c-accordion__body -->
+                            </li>
+                            <!-- END controls SECTION-->
+
+                            <!-- BEGIN Password Display SECTION-->
+                            <li class="em-c-accordion__item em-js-accordion-item em-is-closed" id="accordion-panel-3">
+                                <div class="em-c-accordion__header">
+                                    <a href="#accordion-panel-3" class="em-c-accordion__title em-js-accordion-trigger">
+                                        <svg class="em-c-icon em-c-icon--small em-c-accordion__icon">
+                                            <use xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                xlink:href="./unity-1.3.0/images/em-icons.svg#caret-down">
+                                            </use>
+                                        </svg>
+                                        <span class="em-c-accordion__title-text">3. Password Display</span>
+                                    </a>
+                                </div>
+                                <div class="em-c-accordion__body">
+                                    <label for="passwordDisplay" class="em-c-field__label">Password Display</label>
+                                    <div class="em-c-field__body">
+                                        <select class="em-c-select em-c-select highlight" id="passwordDisplay">
+                                            <option value="">-Select-</option>
+                                            <option value="Standard">Standard</option>
+                                            <option value="Split">Split </option>
+                                            <option value="Disabled">Disabled</option>
+                                        </select>
+                                    </div>
+                                    <div class="em-c-well">
+                                        <div class="em-c-text-passage em-c-text-passage--small">
+                                            <span id="passwordDisplay_Standard" class=""><b>Standard:</b> One user sees the full password on clicking <b>Show</b>/<b>Copy</b> buttons.</span><br>
+                                            <span id="passwordDisplay_Split" class=""><b>Split: </b> Password is split in two
+                                                <span class="em-c-tooltip  em-js-tooltip">
+                                                    <span class="em-c-tooltip__trigger em-js-tooltip-trigger">
+                                                        <div class="em-c-text-passage">
+                                                            halves.
+                                                        </div>
+                                                    </span>
+                                                    <span class="em-c-tooltip__content">
+                                                        <p>H1 and H2</p>
+                                                    </span>
+                                                </span>
+                                            </span>
+                                            <br>
+                                            <span id="passwordDisplay_Disabled" class=""><b>Disabled:</b> Enforces connect button usage. <b>Show</b> and <b>Copy</b> are disabled.</span> <br>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                            <!-- END Password Display SECTION-->
+
+                            <!-- BEGIN Password Management SECTION-->
+                            <li class="em-c-accordion__item em-js-accordion-item em-is-closed" id="accordion-panel-4">
+                                <div class="em-c-accordion__header">
+                                    <a href="#accordion-panel-3" class="em-c-accordion__title em-js-accordion-trigger">
+                                        <svg class="em-c-icon em-c-icon--small em-c-accordion__icon">
+                                            <use xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                xlink:href="./unity-1.3.0/images/em-icons.svg#caret-down">
+                                            </use>
+                                        </svg>
+                                        <span class="em-c-accordion__title-text">4. Password Management</span>
+                                    </a>
+                                </div>
+                                <!-- end em-c-accordion__header -->
+                                <div class="em-c-accordion__body">
+                                    <label for="passwordManagement" class="em-c-field__label">Password Management</label>
+                                    <div class="em-c-field__body">
+                                        <select class="em-c-select em-c-select highlight" id="passwordManagement">
+                                            <option value="">-Select-</option>
+                                            <option value="Auto">Auto</option>
+                                            <option value="External">External</option>
+                                            <option value="Manual">Manual</option>
+                                            <option value="ManualOnUse">Manual on use</option>
+                                            <option value="OnUse">On use</option>
+                                            <option value="PeriodicOnly">Periodic only</option>
+                                        </select>
+                                    </div>
+                                    <div class="em-c-well">
+                                        <div class="em-c-text-passage em-c-text-passage--small">
+                                            <span id="passwordManagement_Auto" class=""><b>Auto:</b> Password is managed by ITPA. Password is reset after each use and periodically. </span><br>
+                                            <span id="passwordManagement_External" class=""><b>External:</b> Password is not managed by ITPA. Password is not reset after each use and multiple individuals can check out an account at one time (Multi-use and No Exclusivity).</span><br>
+                                            <span id="passwordManagement_Manual" class=""><b>Manual:</b> Password is managed by ITPA. Password is not reset after each use and multiple individuals can check out an account at one time (Multi-use and No Exclusivity).</span> <br>
+                                            <span id="passwordManagement_ManualOnUse" class=""><b>ManualOnUse:</b> Password is not managed by ITPA. Password must be reset after each use. Users must reset the password in the target system and set the password in ITPA to match the password in the target system.</span> <br>
+                                            <span id="passwordManagement_OnUse" class=""><b>On Use:</b> Password is managed by ITPA. Password is reset after each use. </span><br>
+                                            <span id="passwordManagement_PeriodicOnly" class=""><b>Periodic Only:</b> ITPA rotates this password periodically. </span><br>
+                                        </div>
+                                     </div>
+                                </div>
+                            </li>
+                            <!-- END Password Management SECTION-->
+
+
+                            <!-- 
+                            <li class="em-c-accordion__item em-js-accordion-item em-is-closed" id="accordion-panel-5">
+                                <div class="em-c-accordion__header">
+                                    <a href="#accordion-panel-5" class="em-c-accordion__title em-js-accordion-trigger">
+                                        <svg class="em-c-icon em-c-icon--small em-c-accordion__icon">
+                                            <use xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                xlink:href="../unity-1.3.0/images/em-icons.svg#caret-down">
+                                            </use>
+                                        </svg>
+                                        <span class="em-c-accordion__title-text">5. Password Length</span>
+                                    </a>
+                                </div>
+                                <div class="em-c-accordion__body">
+                                    <label for="passwordLength" class="em-c-field__label">Is there a password length
+                                        restriction?</label>
+                                    <div class="em-c-field__body">
+                                        <select class="em-c-select em-c-select" id="passwordLength">
+                                            <option value="">-Select-</option>
+                                            <option value="15">15 Chars</option>
+                                            <option value="25">25 Chars</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </li>-->
+                        </ul>
+                        <div class="em-c-btn-group">
+                            <button class="em-c-btn em-c-btn--primary" id="btnSubmit">
+                                <span class="em-c-btn__text">Submit</span>
+                            </button>
+                            <button class="em-c-btn em-c-btn--secondary" id="btnCancel">
+                                <span class="em-c-btn__text">Cancel</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="em-l-grid__item">
+                    <h5>
+                        <p id="rightHeader">Please pick settings that best suit your needs on the left.</p>
+                    </h5>
+                    <div id="selectedPlatform" class="em-c-alert" style="display: none;" role="alert">
+                        <svg class="em-c-icon em-c-icon--small em-c-alert__icon">
+                          <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="./unity-1.3.0/images/em-icons.svg#info"></use>
+                        </svg>
+                        <div class="em-c-alert__body" id="recommendedPlatform"></div>
+                      </div>
+                    <div id="platformSummary" class="em-u-is-vishidden">
+                        <p>This means that accounts under this platform will have:</p>
+                        <span id="platformDefinition"></span><br>
+                        <span>If you're not sure about the suggested platform yet, <b><a href="mailto: GSC-EMIT-CP-EMIT-FIRECALL@exxonmobil.com?subject=Platform question">send us an e-mail</a></b>.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Unity framework has a bug to handle multiple modals (last modal is always NULL), so adding one more makes this as NULL when mapping all modals, but all others will be referenced correctly. -->
+        <div class="em-c-modal em-js-modal em-is-closed" id="fakeModal">
+            <div class="em-c-modal__window em-js-modal-window">
+                <div class="em-c-modal__header">
+                </div>
+                <div>
+                </div>
+            </div>
+        </div>
+
+        <!-- end em-l-container-->
+    </main>
+
+    <footer class="em-c-footer " role="contentinfo">
+        <div class="em-l-container">
+          <div class="em-c-footer__inner">
+            <ul class="em-c-multicolumn-nav " role="navigation">
+              <li class="em-c-multicolumn-nav__item">
+                <a href="https://goto/ITPA" target="_blank" class="em-c-multicolumn-nav__link">ITPA</a>
+              </li>
+              <!-- end em-c-footer-nav__item -->
+              <li class="em-c-multicolumn-nav__item">
+                <a href="https://goto/ITPAToolkit" target="_blank" class="em-c-multicolumn-nav__link">ITPA Toolkit</a>
+              </li>
+              <!-- end em-c-footer-nav__item -->
+            </ul>
+            <!-- end em-c-footer-nav -->
+            <svg class="em-c-logo" xmlns="http://www.w3.org/2000/svg" viewBox="63 150.1 234 59.8"
+              enable-background="new 63 150.1 234 59.8">
+              <path d="M145.7 156.5c-3.3 0-5 1.7-5.6 2.1v-1.5h-4.5v18.2h5v-10.1c0-2.6 1.4-4 3.5-4 2.2 0 3.5 1.5 3.5 4v10.1h5v-11.5c0-4.5-3.1-7.3-6.9-7.3zM196.5 156.5c-5.6 0-9.9 4.4-9.9 9.7 0 5.3 4.3 9.7 9.9 9.7 5.6 0 9.9-4.4 9.9-9.7 0-5.3-4.2-9.7-9.9-9.7zm0 14.3c-2.7 0-4.5-2.1-4.5-4.6 0-2.5 1.9-4.6 4.5-4.6 2.7 0 4.5 2.1 4.5 4.6.2 2.5-1.7 4.6-4.5 4.6zM122.5 156.5c-5.6 0-9.9 4.4-9.9 9.7 0 5.3 4.3 9.7 9.9 9.7 5.6 0 9.9-4.4 9.9-9.7 0-5.3-4.3-9.7-9.9-9.7zm0 14.3c-2.6 0-4.5-2.1-4.5-4.6 0-2.5 1.9-4.6 4.5-4.6 2.7 0 4.5 2.1 4.5 4.6 0 2.5-1.8 4.6-4.5 4.6zM232.6 157.1h5v18.3h-5zM232.6 150.1h5v4.5h-5zM242.6 150.1h5v25.2h-5zM220.5 156.5c-3.7 0-5.6 1.7-5.6 1.9v-8.3h-5v25.2h5v.1-1.5c.4.3 2 1.8 5.6 1.8 4.6 0 9-4.2 9-9.7 0-5.3-4.1-9.5-9-9.5zm-1.3 14.2c-2.6 0-4.6-2-4.6-4.6 0-2.6 2-4.6 4.6-4.6s4.6 2 4.6 4.6c0 2.6-2 4.6-4.6 4.6zM114.3 157.1h-6.4l-8.1 10.3-3.6-3.3 9.1-11.5h-6.3l-6.2 8-3.3-3.5h-7.7l7.7 7.5-8.6 10.7h6.4l5.6-7.3 3.5 3.9-8.1 10.3h6.3l5.2-7 9.7 9.5h7.8l-14.1-13.9zM63 175.3h17v-4.4h-12v-6.3h10.7v-4.4h-10.7v-5.6h12v-4.5h-17zM170.5 168.4h-.2l-4.3-18.3h-8.4v25.2h5.1v-18.9l4.5 18.9h6l4.8-18.9h-.2v18.9h5.7v-25.2h-8.7zM165.6 203.5h-8.5v-13.2h8.2v1.6h-6.5v4.2h6v1.6h-6v4.4h6.8v1.4zM175.2 203.5h-1.6v-5.8c0-.7-.2-1.2-.5-1.6-.3-.3-.9-.5-1.8-.5-.5 0-1 0-1.5.1-.4.1-.7.1-.9.2v7.5h-1.6v-8.8h.1c.5-.1 1.1-.3 1.7-.4.7-.1 1.4-.2 2.2-.2 1.4 0 2.4.3 2.9.8.6.6.9 1.4.9 2.5v6.2zM181.5 203.7c-.7 0-1.3-.1-1.9-.3-.5-.2-1-.5-1.4-.9-.4-.4-.7-.9-.9-1.5-.2-.6-.3-1.2-.3-2s.1-1.4.3-2c.2-.6.5-1.1.9-1.6.4-.4.9-.8 1.4-1 .6-.2 1.2-.3 1.8-.3.7 0 1.3.1 1.8.3.5.2.9.6 1.2 1 .3.4.6.9.7 1.4.1.5.2 1.1.2 1.7v.9h-6.8c0 .4.1.7.2 1 .1.4.3.7.6 1 .2.3.6.5 1 .7.4.2.9.2 1.4.2.6 0 1.2-.1 1.7-.3.5-.2.9-.4 1.2-.5l.2-.1v1.6h-.1c-.4.2-.9.4-1.4.5-.4.1-1.1.2-1.8.2zm-2.9-5.6h5.2l-.1-.9c-.1-.3-.2-.6-.4-.9-.2-.2-.5-.4-.8-.6-.3-.1-.7-.2-1.1-.2-.8 0-1.4.2-1.9.7-.5.5-.8 1.1-.9 1.9zM188.7 203.5h-1.6v-8.7h.1c.5-.2 1-.3 1.6-.4.6-.1 1.2-.2 1.8-.2.4 0 .7 0 1 .1.3 0 .5.1.7.1h.1v1.5h-.2c-.1 0-.3-.1-.6-.1-.5-.1-1.4-.1-2.1 0-.3.1-.6.1-.8.2v7.5zM196.2 208c-.8 0-1.5-.1-2-.2s-.9-.3-1.2-.4h-.1v-1.7l.2.1c.3.1.7.3 1.2.4.5.1 1.1.2 1.8.2 1 0 1.8-.2 2.3-.7.5-.5.8-1.3.8-2.4v-.3c-.3.1-.6.3-1 .4-.5.1-1 .2-1.6.2-.6 0-1.2-.1-1.8-.3-.5-.2-1-.5-1.4-1-.4-.4-.7-.9-.9-1.5-.2-.6-.3-1.2-.3-1.9s.1-1.3.3-1.9c.2-.6.5-1.1 1-1.6.4-.5 1-.8 1.6-1.1.6-.3 1.3-.4 2.2-.4.8 0 1.5.1 2.1.2.6.2 1 .3 1.3.4h.1v8.5c0 .7-.1 1.3-.2 1.8-.2.6-.4 1.1-.8 1.5-.4.4-.9.8-1.5 1-.5.6-1.3.7-2.1.7zm1.1-12.4c-.6 0-1.1.1-1.5.3-.4.2-.8.4-1 .7-.3.3-.5.7-.6 1.1-.1.4-.2.8-.2 1.3 0 1 .3 1.8.8 2.4.5.5 1.3.8 2.2.8.5 0 .9-.1 1.3-.2s.7-.3 1-.4v-5.7c-.2-.1-.5-.1-.8-.2-.3-.1-.7-.1-1.2-.1zM205.1 207.8h-1.7l2-4.5-3.7-9h1.7v.1l1.9 5 .5 1.3c.1.3.2.6.3.8l.3-.8c.1-.4.3-.8.5-1.3l2.2-5.1h1.7l-5.7 13.5zM217.6 203.5h-1.6v-14h1.6v14zM221.6 203.5h-1.6v-9.1h1.6v9.1zm.1-11h-1.8v-1.8h1.8v1.8zM227.7 203.5h-1.6l-3.7-9.1h1.7l2.3 5.8c.1.2.1.4.2.5.1.2.1.4.2.5 0 .1 0 .1.1.2l.3-.8.5-1.1 2.2-5.2h1.7l-3.9 9.2zM236.4 203.7c-.7 0-1.3-.1-1.9-.3-.5-.2-1-.5-1.4-.9-.4-.4-.7-.9-.9-1.5-.2-.6-.3-1.2-.3-2s.1-1.4.3-2c.2-.6.5-1.1.9-1.6.4-.4.9-.8 1.4-1 .6-.2 1.2-.3 1.8-.3.7 0 1.3.1 1.8.3.5.2.9.6 1.2 1 .3.4.6.9.7 1.4.1.5.2 1.1.2 1.7v.9h-6.8c0 .4.1.7.2 1 .1.4.3.7.6 1 .2.3.6.5 1 .7.4.2.9.2 1.4.2.6 0 1.2-.1 1.7-.3.5-.2.9-.4 1.2-.5l.2-.1v1.6h-.1c-.4.2-.9.4-1.4.5-.4.1-1.1.2-1.8.2zm-2.9-5.6h5.2l-.1-.9c-.1-.3-.2-.6-.4-.9-.2-.2-.5-.4-.8-.6-.3-.1-.7-.2-1.1-.2-.8 0-1.4.2-1.9.7-.5.5-.8 1.1-.9 1.9zM244.6 203.7c-.6 0-1.2 0-1.7-.1s-.9-.2-1.3-.4h-.1v-1.6l.2.1c.3.2.7.3 1.2.4.5.1 1 .2 1.5.2.7 0 1.2-.1 1.5-.4.3-.2.5-.5.5-.9 0-.2 0-.4-.1-.5-.1-.1-.2-.2-.4-.3-.2-.1-.4-.2-.7-.3-.3-.1-.6-.2-1-.3l-1.2-.4c-.4-.2-.7-.3-.9-.5-.3-.2-.5-.5-.6-.7-.1-.3-.2-.6-.2-1s.1-.7.2-1.1.4-.6.7-.9c.3-.2.7-.4 1.1-.6.4-.1 1-.2 1.5-.2s1 0 1.4.1c.4.1.8.2 1 .3h.1v1.5l-.2-.1c-.3-.1-.6-.2-1-.3-.4-.1-.9-.2-1.4-.2-.7 0-1.2.1-1.4.4-.3.2-.4.5-.4 1 0 .3.1.6.4.8.3.2.8.4 1.5.6l1.2.4c.4.1.7.3 1 .5.3.2.5.5.7.8.2.3.2.7.2 1.1 0 .3-.1.7-.2 1-.1.3-.3.6-.6.9-.3.3-.7.5-1.1.6-.3 0-.8.1-1.4.1zM262 203.5h-1.6v-5.6c0-.8-.2-1.4-.5-1.8-.3-.4-.8-.5-1.6-.5-.5 0-1 .1-1.5.2-.4.2-.8.3-1.1.5v7.1h-1.6v-14h1.6v5.3c.3-.2.7-.3 1.1-.4.6-.2 1.2-.3 1.8-.3 1.1 0 1.9.3 2.5.9.6.6.9 1.5.9 2.7v5.9zM268.3 203.7c-.7 0-1.3-.1-1.9-.3-.5-.2-1-.5-1.4-.9-.4-.4-.7-.9-.9-1.5-.2-.6-.3-1.2-.3-2s.1-1.4.3-2c.2-.6.5-1.1.9-1.6.4-.4.9-.8 1.4-1 .6-.2 1.2-.3 1.8-.3.7 0 1.3.1 1.8.3.5.2.9.6 1.2 1 .3.4.6.9.7 1.4.1.5.2 1.1.2 1.7v.9h-6.8c0 .4.1.7.2 1 .1.4.3.7.6 1 .2.3.6.5 1 .7.4.2.9.2 1.4.2.6 0 1.2-.1 1.7-.3.5-.2.9-.4 1.2-.5l.2-.1v1.6h-.1c-.4.2-.9.4-1.4.5-.4.1-1.1.2-1.8.2zm-2.9-5.6h5.2l-.1-.9c-.1-.3-.2-.6-.4-.9-.2-.2-.4-.4-.8-.6-.3-.1-.7-.2-1.1-.2-.8 0-1.4.2-1.9.7-.5.5-.8 1.1-.9 1.9zM275.5 203.5h-1.6v-8.7h.1c.5-.2 1-.3 1.6-.4.6-.1 1.2-.2 1.8-.2.4 0 .7 0 1 .1.3 0 .5.1.7.1h.1v1.5h-.2c-.1 0-.3-.1-.6-.1-.5-.1-1.3-.1-2.1 0-.3.1-.6.1-.8.2v7.5zM283.7 203.7c-.7 0-1.3-.1-1.9-.3-.5-.2-1-.5-1.4-.9-.4-.4-.7-.9-.9-1.5-.2-.6-.3-1.2-.3-2s.1-1.4.3-2c.2-.6.5-1.1.9-1.6.4-.4.9-.8 1.4-1 .6-.2 1.2-.3 1.8-.3.7 0 1.3.1 1.8.3.5.2.9.6 1.2 1 .3.4.6.9.7 1.4.1.5.2 1.1.2 1.7v.9h-6.8c0 .4.1.7.2 1 .1.4.3.7.6 1 .2.3.6.5 1 .7.4.2.9.2 1.4.2.6 0 1.2-.1 1.7-.3.5-.2.9-.4 1.2-.5l.2-.1v1.6h-.1c-.4.2-.9.4-1.4.5-.4.1-1 .2-1.8.2zm-2.8-5.6h5.2l-.1-.9c-.1-.3-.2-.6-.4-.9-.2-.2-.5-.4-.8-.6-.3-.1-.7-.2-1.1-.2-.8 0-1.4.2-1.9.7-.5.5-.8 1.1-.9 1.9zM289 194h-.5v-1.7h-.6v-.4h1.7v.4h-.6v1.7zM292 194h-.5v-1.2l-.5 1.2h-.4l-.5-1.1v1.2h-.5v-2.1h.5l.6 1.3.6-1.4h.5v2.1z"></path>
+            </svg>
+          </div>
+          <!-- end em-c-footer__inner -->
+        </div>
+        <!-- end em-l-container -->
+      </footer>
+
+    <!-- end main-->
+    <!-- Add unity JavaScript to bottom of body -->
+    <script type="text/javascript" src="./unity-1.3.0/js/em-unity-1.3.0.js"></script>
+</body>
+
+</html>
+
+  
